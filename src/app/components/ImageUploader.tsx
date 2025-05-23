@@ -12,15 +12,29 @@ import {
 import { CloudUpload, Delete, Image as ImageIcon } from "@mui/icons-material";
 import { UploadedImage } from "@/types/image";
 import { ImagePreviewModal } from "@/components/ImagePreviewModal";
+import { FieldProps } from "formik";
 
-const ImageUploader: React.FC = () => {
-  const [images, setImages] = useState<UploadedImage[]>([]);
+interface ImageUploaderProps extends FieldProps {
+  disabled?: boolean;
+}
+
+export const ImageUploader: React.FC<ImageUploaderProps> = ({
+  field,
+  form,
+  disabled = false,
+}) => {
   const [previewImage, setPreviewImage] = useState<UploadedImage | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  const images: UploadedImage[] = field.value || [];
+  const hasError = form.touched[field.name] && !!form.errors[field.name];
+  const errorMessage = hasError
+    ? (form.errors[field.name] as string)
+    : undefined;
+
   const validateFile = (file: File): boolean => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 50 * 1024 * 1024;
     const allowedTypes = [
       "image/jpeg",
       "image/jpg",
@@ -30,63 +44,96 @@ const ImageUploader: React.FC = () => {
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      setError("Please upload only image files (JPEG, PNG, GIF, WebP)");
+      setUploadError("Please upload only image files (JPEG, PNG, GIF, WebP)");
       return false;
     }
 
     if (file.size > maxSize) {
-      setError("File size must be less than 10MB");
+      setUploadError("File size must be less than 50MB");
       return false;
     }
 
     return true;
   };
 
-  const processFiles = (files: FileList) => {
-    setError(null);
-    const newImages: UploadedImage[] = [];
+  const processFiles = useCallback(
+    (files: FileList) => {
+      setUploadError(null);
+      const newImages: UploadedImage[] = [];
 
-    Array.from(files).forEach((file) => {
-      if (validateFile(file)) {
-        const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const url = URL.createObjectURL(file);
+      Array.from(files).forEach((file) => {
+        if (validateFile(file)) {
+          const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          const url = URL.createObjectURL(file);
 
-        newImages.push({
-          id,
-          file,
-          url,
-          name: file.name,
-          size: file.size,
-        });
+          newImages.push({
+            id,
+            file,
+            url,
+            name: file.name,
+            size: file.size,
+          });
+        }
+      });
+
+      if (newImages.length > 0) {
+        const updatedImages = [...images, ...newImages];
+        form.setFieldValue(field.name, updatedImages);
+        form.setFieldTouched(field.name, true);
+        // Force validation after state update
+        setTimeout(() => {
+          form.validateField(field.name);
+        }, 0);
       }
-    });
+    },
+    [images, form, field.name],
+  );
 
-    setImages((prev) => [...prev, ...newImages]);
-  };
+  const deleteImage = useCallback(
+    (id: string) => {
+      const imageToDelete = images.find((img) => img.id === id);
+      if (imageToDelete) {
+        URL.revokeObjectURL(imageToDelete.url);
+      }
+
+      const updatedImages = images.filter((img) => img.id !== id);
+      form.setFieldValue(field.name, updatedImages);
+      form.setFieldTouched(field.name, true);
+      // Force validation after state update
+      setTimeout(() => {
+        form.validateField(field.name);
+      }, 0);
+    },
+    [images, form, field.name],
+  );
 
   const handleFileUpload = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = event.target.files;
-      if (!files) return;
+      if (!files || disabled) return;
       processFiles(files);
       event.target.value = "";
     },
-    [],
+    [processFiles, disabled],
   );
 
-  const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragOver(false);
-    const files = event.dataTransfer.files;
-    processFiles(files);
-  }, []);
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      setIsDragOver(false);
+      if (disabled) return;
+      const files = event.dataTransfer.files;
+      processFiles(files);
+    },
+    [processFiles, disabled],
+  );
 
   const handleDragOver = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
-      setIsDragOver(true);
+      if (!disabled) setIsDragOver(true);
     },
-    [],
+    [disabled],
   );
 
   const handleDragLeave = useCallback(
@@ -97,16 +144,6 @@ const ImageUploader: React.FC = () => {
     [],
   );
 
-  const deleteImage = useCallback((id: string) => {
-    setImages((prev) => {
-      const imageToDelete = prev.find((img) => img.id === id);
-      if (imageToDelete) {
-        URL.revokeObjectURL(imageToDelete.url);
-      }
-      return prev.filter((img) => img.id !== id);
-    });
-  }, []);
-
   const openPreview = useCallback((image: UploadedImage) => {
     setPreviewImage(image);
   }, []);
@@ -115,11 +152,13 @@ const ImageUploader: React.FC = () => {
     setPreviewImage(null);
   }, []);
 
+  const displayError = uploadError || errorMessage;
+
   return (
     <Box sx={{ width: "100%", maxWidth: 800, mx: "auto", p: 3 }}>
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
+      {displayError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {displayError}
         </Alert>
       )}
 
@@ -130,19 +169,30 @@ const ImageUploader: React.FC = () => {
         elevation={isDragOver ? 8 : 2}
         sx={{
           border: 2,
-          borderColor: isDragOver ? "primary.main" : "primary.light",
+          borderColor: hasError
+            ? "error.main"
+            : isDragOver
+              ? "primary.main"
+              : "primary.light",
           borderStyle: "dashed",
           borderRadius: 2,
           p: 4,
           textAlign: "center",
           mb: 3,
-          cursor: "pointer",
-          bgcolor: isDragOver ? "primary.50" : "grey.50",
+          cursor: disabled ? "not-allowed" : "pointer",
+          bgcolor: disabled
+            ? "action.disabledBackground"
+            : isDragOver
+              ? "primary.50"
+              : "grey.50",
+          opacity: disabled ? 0.6 : 1,
           transition: "all 0.2s ease-in-out",
-          "&:hover": {
-            bgcolor: "primary.50",
-            borderColor: "primary.main",
-          },
+          ...(!disabled && {
+            "&:hover": {
+              bgcolor: "primary.50",
+              borderColor: hasError ? "error.main" : "primary.main",
+            },
+          }),
         }}
       >
         <input
@@ -152,6 +202,7 @@ const ImageUploader: React.FC = () => {
           multiple
           type="file"
           onChange={handleFileUpload}
+          disabled={disabled}
         />
         <label htmlFor="file-upload">
           <IconButton
@@ -159,6 +210,7 @@ const ImageUploader: React.FC = () => {
             component="span"
             size="large"
             sx={{ mb: 2 }}
+            disabled={disabled}
           >
             <CloudUpload sx={{ fontSize: 48 }} />
           </IconButton>
@@ -166,7 +218,7 @@ const ImageUploader: React.FC = () => {
             Drop images here or click to upload
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Supports JPEG, PNG, GIF, WebP (max 10MB each)
+            Supports JPEG, PNG, GIF, WebP (max 50MB each)
           </Typography>
         </label>
       </Paper>
@@ -207,6 +259,7 @@ const ImageUploader: React.FC = () => {
                         e.stopPropagation();
                         deleteImage(image.id);
                       }}
+                      disabled={disabled}
                       sx={{
                         position: "absolute",
                         top: 8,
@@ -260,5 +313,3 @@ const ImageUploader: React.FC = () => {
     </Box>
   );
 };
-
-export default ImageUploader;
