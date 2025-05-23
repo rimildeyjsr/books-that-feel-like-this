@@ -28,7 +28,8 @@
       "@/styles/*": ["./src/app/styles/*"],
       "@/assets/*": ["./src/app/assets/*"],
       "@/config/*": ["./src/app/config/*"],
-      "@/schemas/*": ["./src/app/schemas/*"]
+      "@/schemas/*": ["./src/app/schemas/*"],
+      "@/services/*": ["./src/app/services/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
