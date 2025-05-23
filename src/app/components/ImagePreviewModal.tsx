@@ -1,14 +1,5 @@
 import React from "react";
-import {
-  Box,
-  Button,
-  Chip,
-  IconButton,
-  Modal,
-  Stack,
-  Typography,
-} from "@mui/material";
-import { Close, Delete } from "@mui/icons-material";
+import { X, Trash2 } from "lucide-react";
 import { UploadedImage } from "@/types/image";
 
 interface ImagePreviewModalProps {
@@ -16,6 +7,7 @@ interface ImagePreviewModalProps {
   image: UploadedImage | null;
   onClose: () => void;
   onDelete: (id: string) => void;
+  disabled?: boolean;
 }
 
 export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
@@ -23,91 +15,50 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
   image,
   onClose,
   onDelete,
+  disabled = false,
 }) => {
+  if (!open || !image) return null;
+
   const handleDelete = () => {
-    if (image) {
-      onDelete(image.id);
-      onClose();
-    }
+    onDelete(image.id);
+    onClose();
   };
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <Box
-        sx={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          bgcolor: "background.paper",
-          borderRadius: 2,
-          boxShadow: 24,
-          p: 0,
-          maxWidth: "90vw",
-          maxHeight: "90vh",
-          outline: "none",
-        }}
-      >
-        {image && (
-          <>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                p: 2,
-                borderBottom: 1,
-                borderColor: "divider",
-              }}
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+      <div className="bg-white rounded-3xl max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <h3 className="text-lg font-medium text-gray-900 truncate flex-1 mr-4">
+            {image.name}
+          </h3>
+          <div className="flex items-center space-x-3">
+            <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+              {(image.size / 1024 / 1024).toFixed(1)} MB
+            </span>
+            <button
+              onClick={handleDelete}
+              disabled={disabled}
+              className="flex items-center space-x-2 text-red-600 hover:bg-red-50 px-3 py-2 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Typography
-                variant="h6"
-                component="h2"
-                noWrap
-                sx={{ flex: 1, mr: 2 }}
-              >
-                {image.name}
-              </Typography>
-              <Stack direction="row" spacing={1}>
-                <Button
-                  variant="contained"
-                  color="error"
-                  startIcon={<Delete />}
-                  onClick={handleDelete}
-                  size="small"
-                >
-                  Delete
-                </Button>
-                <IconButton onClick={onClose}>
-                  <Close />
-                </IconButton>
-              </Stack>
-            </Box>
-            <Box sx={{ p: 2 }}>
-              <Box
-                component="img"
-                src={image.url}
-                alt={image.name}
-                sx={{
-                  width: "100%",
-                  height: "auto",
-                  maxHeight: "70vh",
-                  objectFit: "contain",
-                  borderRadius: 1,
-                }}
-              />
-              <Box sx={{ mt: 2 }}>
-                <Chip
-                  label={`${(image.size / 1024 / 1024).toFixed(2)} MB`}
-                  size="small"
-                  variant="outlined"
-                  color="primary"
-                />
-              </Box>
-            </Box>
-          </>
-        )}
-      </Box>
-    </Modal>
+              <Trash2 className="w-4 h-4" />
+              <span>Delete</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+            >
+              <X className="w-4 h-4 text-gray-600" />
+            </button>
+          </div>
+        </div>
+        <div className="p-6">
+          <img
+            src={image.url}
+            alt={image.name}
+            className="w-full h-auto max-h-[60vh] object-contain rounded-2xl"
+          />
+        </div>
+      </div>
+    </div>
   );
 };

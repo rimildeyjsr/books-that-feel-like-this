@@ -1,5 +1,4 @@
 import React, { useCallback } from "react";
-import { TextField, Box } from "@mui/material";
 import { FieldProps } from "formik";
 
 interface PromptInputProps extends FieldProps {
@@ -9,7 +8,6 @@ interface PromptInputProps extends FieldProps {
   rows?: number;
   disabled?: boolean;
   fullWidth?: boolean;
-  variant?: "outlined" | "filled" | "standard";
   maxLength?: number;
   onSubmit?: () => void;
 }
@@ -17,13 +15,12 @@ interface PromptInputProps extends FieldProps {
 export const PromptInput: React.FC<PromptInputProps> = ({
   field,
   form,
-  placeholder = "Enter your prompt...",
-  label = "Prompt (Optional)",
+  placeholder = "Dark academia vibes, cozy mystery, ethereal fantasy...",
+  label = "Describe what you're looking for",
   multiline = true,
   rows = 3,
   disabled = false,
   fullWidth = true,
-  variant = "outlined",
   maxLength = 1000,
   onSubmit,
 }) => {
@@ -33,7 +30,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({
     : undefined;
 
   const handleChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = event.target.value;
       if (newValue.length <= maxLength) {
         field.onChange(event);
@@ -43,12 +40,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({
   );
 
   const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (event.key === "Enter" && !event.shiftKey && !multiline) {
-        event.preventDefault();
-        onSubmit?.();
-      }
-
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === "Enter" && event.ctrlKey && multiline) {
         event.preventDefault();
         onSubmit?.();
@@ -58,41 +50,38 @@ export const PromptInput: React.FC<PromptInputProps> = ({
   );
 
   const handleBlur = useCallback(
-    (event: React.FocusEvent<HTMLInputElement>) => {
+    (event: React.FocusEvent<HTMLTextAreaElement>) => {
       field.onBlur(event);
     },
     [field],
   );
 
   return (
-    <Box sx={{ width: "100%" }}>
-      <TextField
+    <div
+      className={`bg-white rounded-3xl p-8 shadow-sm border ${hasError ? "border-red-200" : "border-gray-100"}`}
+    >
+      <label className="block text-base font-medium text-gray-900 mb-6">
+        {label}
+        <span className="text-gray-500 font-normal ml-2">Optional</span>
+      </label>
+      <textarea
         {...field}
         onChange={handleChange}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        label={label}
-        multiline={multiline}
-        rows={multiline ? rows : 1}
+        rows={rows}
         disabled={disabled}
-        fullWidth={fullWidth}
-        variant={variant}
-        error={hasError}
-        helperText={
-          errorMessage ||
-          (multiline
-            ? `${field.value.length}/${maxLength} characters • Ctrl+Enter to submit`
-            : `${field.value.length}/${maxLength} characters • Enter to submit`)
-        }
-        sx={{
-          "& .MuiOutlinedInput-root": {
-            "&:hover fieldset": {
-              borderColor: hasError ? "error.main" : "primary.main",
-            },
-          },
-        }}
+        className="w-full p-0 border-0 focus:ring-0 text-gray-900 placeholder-gray-400 resize-none text-lg leading-relaxed bg-transparent"
       />
-    </Box>
+      <div className="flex justify-between items-center mt-6 pt-6 border-t border-gray-100">
+        <span className="text-sm text-gray-400">
+          {field.value.length}/{maxLength} characters
+        </span>
+        {errorMessage && (
+          <span className="text-sm text-red-600">{errorMessage}</span>
+        )}
+      </div>
+    </div>
   );
 };

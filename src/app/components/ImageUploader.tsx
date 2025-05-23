@@ -1,15 +1,5 @@
 import React, { useState, useCallback } from "react";
-import {
-  Box,
-  Card,
-  CardMedia,
-  IconButton,
-  Typography,
-  Alert,
-  Grid,
-  Paper,
-} from "@mui/material";
-import { CloudUpload, Delete, Image as ImageIcon } from "@mui/icons-material";
+import { Plus, X } from "lucide-react";
 import { UploadedImage } from "@/types/image";
 import { ImagePreviewModal } from "@/components/ImagePreviewModal";
 import { FieldProps } from "formik";
@@ -44,12 +34,12 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      setUploadError("Please upload only image files (JPEG, PNG, GIF, WebP)");
+      setUploadError("Only image files are supported");
       return false;
     }
 
     if (file.size > maxSize) {
-      setUploadError("File size must be less than 50MB");
+      setUploadError("File size must be under 50MB");
       return false;
     }
 
@@ -80,7 +70,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         const updatedImages = [...images, ...newImages];
         form.setFieldValue(field.name, updatedImages);
         form.setFieldTouched(field.name, true);
-        // Force validation after state update
         setTimeout(() => {
           form.validateField(field.name);
         }, 0);
@@ -99,7 +88,6 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       const updatedImages = images.filter((img) => img.id !== id);
       form.setFieldValue(field.name, updatedImages);
       form.setFieldTouched(field.name, true);
-      // Force validation after state update
       setTimeout(() => {
         form.validateField(field.name);
       }, 0);
@@ -155,45 +143,29 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
   const displayError = uploadError || errorMessage;
 
   return (
-    <Box sx={{ width: "100%", maxWidth: 800, mx: "auto", p: 3 }}>
+    <div className="space-y-6">
+      <h2 className="text-xl font-medium text-gray-900">Visual Inspiration</h2>
+
       {displayError && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {displayError}
-        </Alert>
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+          <p className="text-red-800 text-sm">{displayError}</p>
+        </div>
       )}
 
-      <Paper
+      {/* Upload Zone */}
+      <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        elevation={isDragOver ? 8 : 2}
-        sx={{
-          border: 2,
-          borderColor: hasError
-            ? "error.main"
+        className={`relative bg-white border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-200 ${
+          disabled
+            ? "border-gray-100 bg-gray-50 cursor-not-allowed opacity-60"
             : isDragOver
-              ? "primary.main"
-              : "primary.light",
-          borderStyle: "dashed",
-          borderRadius: 2,
-          p: 4,
-          textAlign: "center",
-          mb: 3,
-          cursor: disabled ? "not-allowed" : "pointer",
-          bgcolor: disabled
-            ? "action.disabledBackground"
-            : isDragOver
-              ? "primary.50"
-              : "grey.50",
-          opacity: disabled ? 0.6 : 1,
-          transition: "all 0.2s ease-in-out",
-          ...(!disabled && {
-            "&:hover": {
-              bgcolor: "primary.50",
-              borderColor: hasError ? "error.main" : "primary.main",
-            },
-          }),
-        }}
+              ? "border-gray-400 bg-gray-50"
+              : hasError
+                ? "border-red-200 hover:border-red-300"
+                : "border-gray-200 hover:border-gray-300"
+        }`}
       >
         <input
           accept="image/*"
@@ -204,104 +176,68 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           onChange={handleFileUpload}
           disabled={disabled}
         />
-        <label htmlFor="file-upload">
-          <IconButton
-            color="primary"
-            component="span"
-            size="large"
-            sx={{ mb: 2 }}
-            disabled={disabled}
+        <label htmlFor="file-upload" className="cursor-pointer">
+          <div
+            className={`inline-flex items-center justify-center w-12 h-12 rounded-xl mb-6 ${
+              disabled ? "bg-gray-100" : hasError ? "bg-red-100" : "bg-gray-100"
+            }`}
           >
-            <CloudUpload sx={{ fontSize: 48 }} />
-          </IconButton>
-          <Typography variant="h6" gutterBottom color="primary">
-            Drop images here or click to upload
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Supports JPEG, PNG, GIF, WebP (max 50MB each)
-          </Typography>
+            <Plus
+              className={`w-6 h-6 ${
+                disabled
+                  ? "text-gray-400"
+                  : hasError
+                    ? "text-red-600"
+                    : "text-gray-600"
+              }`}
+            />
+          </div>
+
+          <h3
+            className={`text-lg font-medium mb-2 ${
+              disabled ? "text-gray-400" : "text-gray-900"
+            }`}
+          >
+            Add Images
+          </h3>
+          <p className="text-gray-500 mb-4">
+            Drop images here or click to browse
+          </p>
+          <p className="text-sm text-gray-400">
+            JPEG, PNG, GIF, WebP up to 50MB
+          </p>
         </label>
-      </Paper>
+      </div>
 
+      {/* Image Grid */}
       {images.length > 0 && (
-        <>
-          <Typography variant="h6" gutterBottom>
-            Uploaded Images ({images.length})
-          </Typography>
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            {images.map((image) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={image.id}>
-                <Card
-                  sx={{
-                    cursor: "pointer",
-                    transition: "all 0.2s ease-in-out",
-                    "&:hover": {
-                      transform: "translateY(-4px)",
-                      boxShadow: 4,
-                      "& .delete-button": {
-                        opacity: 1,
-                      },
-                    },
-                  }}
-                  onClick={() => openPreview(image)}
-                >
-                  <Box sx={{ position: "relative" }}>
-                    <CardMedia
-                      component="img"
-                      height="200"
-                      image={image.url}
-                      alt={image.name}
-                      sx={{ objectFit: "cover" }}
-                    />
-                    <IconButton
-                      className="delete-button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteImage(image.id);
-                      }}
-                      disabled={disabled}
-                      sx={{
-                        position: "absolute",
-                        top: 8,
-                        right: 8,
-                        bgcolor: "rgba(255, 255, 255, 0.9)",
-                        opacity: 0,
-                        transition: "all 0.2s ease-in-out",
-                        "&:hover": {
-                          bgcolor: "rgba(255, 255, 255, 1)",
-                          transform: "scale(1.1)",
-                        },
-                      }}
-                      size="small"
-                    >
-                      <Delete color="error" />
-                    </IconButton>
-                  </Box>
-                  <Box sx={{ p: 1 }}>
-                    <Typography variant="caption" noWrap color="text.secondary">
-                      {image.name}
-                    </Typography>
-                  </Box>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </>
-      )}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {images.map((image) => (
+            <div
+              key={image.id}
+              className="group relative aspect-square bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 cursor-pointer hover:shadow-md transition-all duration-200"
+              onClick={() => openPreview(image)}
+            >
+              <img
+                src={image.url}
+                alt={image.name}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
 
-      {images.length === 0 && (
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            py: 6,
-            color: "text.secondary",
-          }}
-        >
-          <ImageIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
-          <Typography variant="body1">No images uploaded yet</Typography>
-        </Box>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteImage(image.id);
+                }}
+                disabled={disabled}
+                className="absolute top-3 right-3 w-8 h-8 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-sm disabled:opacity-30"
+              >
+                <X className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
+          ))}
+        </div>
       )}
 
       <ImagePreviewModal
@@ -309,7 +245,8 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
         image={previewImage}
         onClose={closePreview}
         onDelete={deleteImage}
+        disabled={disabled}
       />
-    </Box>
+    </div>
   );
 };
